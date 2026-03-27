@@ -104,7 +104,7 @@ Register a new digital asset. Requires `Authorization: Bearer <token>`.
 
 ---
 
-### `GET /assets` 🔒
+### `GET /assets` 
 List all assets. Supports query params:
 - `?owner=me` — only your assets
 - `?type=NFT` — filter by asset type
@@ -112,7 +112,7 @@ List all assets. Supports query params:
 
 ---
 
-### `GET /assets/:id` 🔒
+### `GET /assets/:id` 
 Fetch a single asset by UUID.
 
 ---
