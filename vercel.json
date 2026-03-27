@@ -8,8 +8,20 @@
   ],
   "routes": [
     {
-      "src": "/(.*)",
+      "src": "/auth/(.*)",
       "dest": "server.js"
+    },
+    {
+      "src": "/assets(.*)",
+      "dest": "server.js"
+    },
+    {
+      "src": "/contract/(.*)",
+      "dest": "server.js"
+    },
+    {
+      "src": "/(.*)",
+      "dest": "/index.html"
     }
   ],
   "env": {
