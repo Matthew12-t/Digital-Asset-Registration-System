@@ -1,0 +1,810 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>AssetChain — Digital Asset Registry</title>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Mono:ital,wght@0,400;0,700;1,400&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet"/>
+  <style>
+    :root {
+      --bg: #0a0e1a;
+      --surface: #111827;
+      --surface2: #1a2235;
+      --border: #1e2d45;
+      --accent: #00e5ff;
+      --accent2: #7c3aed;
+      --success: #10b981;
+      --warning: #f59e0b;
+      --danger: #ef4444;
+      --text: #e2e8f0;
+      --muted: #64748b;
+      --mono: 'Space Mono', monospace;
+      --sans: 'DM Sans', sans-serif;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { background: var(--bg); color: var(--text); font-family: var(--sans); min-height: 100vh; }
+
+    /* ── Layout ── */
+    .app { display: grid; grid-template-columns: 220px 1fr; min-height: 100vh; }
+    .sidebar {
+      background: var(--surface);
+      border-right: 1px solid var(--border);
+      padding: 28px 0;
+      display: flex; flex-direction: column; gap: 4px;
+      position: sticky; top: 0; height: 100vh;
+    }
+    .logo {
+      font-family: var(--mono); font-size: 13px; color: var(--accent);
+      padding: 0 20px 24px; letter-spacing: 2px; text-transform: uppercase;
+      border-bottom: 1px solid var(--border); margin-bottom: 8px;
+    }
+    .logo span { color: var(--muted); }
+    .nav-item {
+      display: flex; align-items: center; gap: 10px;
+      padding: 10px 20px; cursor: pointer; border-radius: 0;
+      font-size: 13px; color: var(--muted); transition: all 0.15s;
+      border-left: 2px solid transparent;
+    }
+    .nav-item:hover { color: var(--text); background: var(--surface2); }
+    .nav-item.active { color: var(--accent); border-left-color: var(--accent); background: rgba(0,229,255,0.06); }
+    .nav-icon { font-size: 15px; width: 18px; text-align: center; }
+    .nav-badge {
+      margin-left: auto; background: var(--accent2); color: white;
+      font-size: 10px; padding: 2px 6px; border-radius: 10px; font-family: var(--mono);
+    }
+    .sidebar-footer { margin-top: auto; padding: 16px 20px; border-top: 1px solid var(--border); }
+    .user-chip {
+      background: var(--surface2); border: 1px solid var(--border);
+      border-radius: 8px; padding: 10px 12px;
+      font-size: 12px; color: var(--muted);
+    }
+    .user-chip strong { display: block; color: var(--text); font-size: 13px; margin-bottom: 2px; }
+
+    .main { overflow-y: auto; }
+    .page { display: none; padding: 40px; max-width: 900px; }
+    .page.active { display: block; }
+    .page-title { font-family: var(--mono); font-size: 22px; color: var(--accent); margin-bottom: 6px; }
+    .page-sub { color: var(--muted); font-size: 14px; margin-bottom: 32px; }
+
+    /* ── Cards ── */
+    .card {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: 12px; padding: 24px; margin-bottom: 20px;
+    }
+    .card-title { font-size: 13px; font-family: var(--mono); color: var(--muted); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 16px; }
+
+    /* ── Forms ── */
+    .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px; }
+    .form-row.single { grid-template-columns: 1fr; }
+    .field { display: flex; flex-direction: column; gap: 6px; }
+    label { font-size: 12px; color: var(--muted); font-family: var(--mono); letter-spacing: 0.5px; }
+    input, select, textarea {
+      background: var(--surface2); border: 1px solid var(--border);
+      border-radius: 8px; color: var(--text); padding: 10px 12px;
+      font-size: 14px; font-family: var(--sans); outline: none; transition: border 0.2s;
+    }
+    input:focus, select:focus, textarea:focus { border-color: var(--accent); }
+    textarea { resize: vertical; min-height: 80px; }
+    select option { background: var(--surface2); }
+
+    .btn {
+      display: inline-flex; align-items: center; gap: 8px;
+      padding: 10px 20px; border-radius: 8px; border: none; cursor: pointer;
+      font-size: 14px; font-family: var(--sans); font-weight: 500; transition: all 0.15s;
+    }
+    .btn-primary { background: var(--accent); color: #000; }
+    .btn-primary:hover { background: #00ccee; }
+    .btn-secondary { background: var(--surface2); color: var(--text); border: 1px solid var(--border); }
+    .btn-secondary:hover { border-color: var(--accent); color: var(--accent); }
+    .btn-danger { background: rgba(239,68,68,0.15); color: var(--danger); border: 1px solid rgba(239,68,68,0.3); }
+    .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+    /* ── Alerts ── */
+    .alert { border-radius: 8px; padding: 12px 16px; font-size: 13px; margin-bottom: 16px; display: none; }
+    .alert.show { display: block; }
+    .alert-success { background: rgba(16,185,129,0.12); border: 1px solid rgba(16,185,129,0.3); color: var(--success); }
+    .alert-error { background: rgba(239,68,68,0.12); border: 1px solid rgba(239,68,68,0.3); color: var(--danger); }
+    .alert-info { background: rgba(0,229,255,0.08); border: 1px solid rgba(0,229,255,0.2); color: var(--accent); }
+
+    /* ── Token display ── */
+    .token-box {
+      background: var(--bg); border: 1px solid var(--border);
+      border-radius: 8px; padding: 12px; font-family: var(--mono);
+      font-size: 11px; color: var(--accent); word-break: break-all;
+      position: relative; margin-top: 12px;
+    }
+    .copy-btn {
+      position: absolute; top: 8px; right: 8px;
+      background: var(--surface2); border: 1px solid var(--border);
+      border-radius: 4px; padding: 4px 8px; font-size: 10px;
+      color: var(--muted); cursor: pointer; font-family: var(--mono);
+    }
+    .copy-btn:hover { color: var(--accent); }
+
+    /* ── Assets list ── */
+    .assets-grid { display: grid; gap: 16px; }
+    .asset-card {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: 12px; padding: 20px; cursor: pointer;
+      transition: border-color 0.15s, transform 0.1s;
+    }
+    .asset-card:hover { border-color: var(--accent); transform: translateY(-1px); }
+    .asset-header { display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 12px; }
+    .asset-name { font-size: 15px; font-weight: 600; margin-bottom: 4px; }
+    .asset-type {
+      font-family: var(--mono); font-size: 10px; padding: 3px 8px;
+      border-radius: 4px; background: rgba(124,58,237,0.2); color: #a78bfa;
+      border: 1px solid rgba(124,58,237,0.3);
+    }
+    .asset-desc { font-size: 13px; color: var(--muted); margin-bottom: 12px; line-height: 1.5; }
+    .asset-meta { display: flex; gap: 16px; font-size: 11px; color: var(--muted); font-family: var(--mono); }
+    .hash-tag { color: var(--accent); }
+    .tag-list { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 8px; }
+    .tag {
+      font-size: 11px; padding: 2px 8px; border-radius: 20px;
+      background: var(--surface2); border: 1px solid var(--border); color: var(--muted);
+    }
+
+    /* ── Blockchain info ── */
+    .tx-info {
+      background: rgba(0,229,255,0.04); border: 1px solid rgba(0,229,255,0.15);
+      border-radius: 8px; padding: 16px; font-family: var(--mono); font-size: 11px;
+    }
+    .tx-row { display: flex; justify-content: space-between; padding: 4px 0; border-bottom: 1px solid rgba(0,229,255,0.08); }
+    .tx-row:last-child { border-bottom: none; }
+    .tx-label { color: var(--muted); }
+    .tx-val { color: var(--accent); max-width: 300px; overflow: hidden; text-overflow: ellipsis; }
+
+    /* ── Stats ── */
+    .stats-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-bottom: 28px; }
+    .stat-card {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: 12px; padding: 20px;
+    }
+    .stat-num { font-family: var(--mono); font-size: 28px; color: var(--accent); margin-bottom: 4px; }
+    .stat-label { font-size: 12px; color: var(--muted); }
+
+    /* ── API Docs ── */
+    .endpoint {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: 12px; margin-bottom: 12px; overflow: hidden;
+    }
+    .endpoint-header {
+      display: flex; align-items: center; gap: 12px;
+      padding: 14px 20px; cursor: pointer;
+    }
+    .method {
+      font-family: var(--mono); font-size: 11px; padding: 3px 8px;
+      border-radius: 4px; font-weight: 700; min-width: 48px; text-align: center;
+    }
+    .method.get { background: rgba(16,185,129,0.2); color: var(--success); }
+    .method.post { background: rgba(0,229,255,0.15); color: var(--accent); }
+    .endpoint-path { font-family: var(--mono); font-size: 13px; }
+    .endpoint-desc { font-size: 13px; color: var(--muted); margin-left: auto; }
+    .endpoint-body { padding: 0 20px 16px; display: none; }
+    .endpoint-body.open { display: block; }
+    pre {
+      background: var(--bg); border: 1px solid var(--border);
+      border-radius: 8px; padding: 14px; font-size: 12px; font-family: var(--mono);
+      overflow-x: auto; color: var(--text); line-height: 1.6;
+    }
+    .kw { color: #7c3aed; }
+    .str { color: var(--success); }
+    .num { color: var(--warning); }
+    .key { color: var(--accent); }
+
+    /* ── Search bar ── */
+    .search-bar {
+      display: flex; gap: 12px; margin-bottom: 20px;
+    }
+    .search-bar input { flex: 1; }
+
+    /* ── Modal ── */
+    .modal-bg {
+      position: fixed; inset: 0; background: rgba(0,0,0,0.7);
+      display: none; align-items: center; justify-content: center; z-index: 100;
+    }
+    .modal-bg.open { display: flex; }
+    .modal {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: 16px; padding: 32px; max-width: 600px; width: 90%;
+      max-height: 80vh; overflow-y: auto;
+    }
+    .modal-title { font-family: var(--mono); font-size: 16px; color: var(--accent); margin-bottom: 20px; }
+    .modal-close { float: right; cursor: pointer; color: var(--muted); font-size: 20px; margin-top: -4px; }
+    .detail-row { display: flex; flex-direction: column; gap: 4px; margin-bottom: 14px; }
+    .detail-label { font-size: 11px; font-family: var(--mono); color: var(--muted); text-transform: uppercase; }
+    .detail-val { font-size: 14px; }
+
+    /* ── Auth gate ── */
+    #auth-gate {
+      min-height: 100vh; display: flex; align-items: center; justify-content: center;
+      background: var(--bg); padding: 20px;
+    }
+    .auth-card {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: 16px; padding: 40px; width: 100%; max-width: 440px;
+    }
+    .auth-logo { font-family: var(--mono); font-size: 18px; color: var(--accent); margin-bottom: 6px; letter-spacing: 2px; }
+    .auth-sub { color: var(--muted); font-size: 13px; margin-bottom: 32px; }
+    .auth-tabs { display: flex; gap: 0; margin-bottom: 28px; background: var(--surface2); border-radius: 8px; padding: 4px; }
+    .auth-tab {
+      flex: 1; padding: 8px; text-align: center; cursor: pointer;
+      font-size: 13px; font-family: var(--mono); color: var(--muted); border-radius: 6px;
+    }
+    .auth-tab.active { background: var(--surface); color: var(--accent); }
+
+    .spinner { display: inline-block; width: 14px; height: 14px; border: 2px solid rgba(0,0,0,0.3); border-top-color: #000; border-radius: 50%; animation: spin 0.6s linear infinite; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    @media (max-width: 768px) {
+      .app { grid-template-columns: 1fr; }
+      .sidebar { display: none; }
+      .stats-grid { grid-template-columns: 1fr; }
+      .form-row { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- Auth Gate -->
+<div id="auth-gate">
+  <div class="auth-card">
+    <div class="auth-logo">⬡ ASSETCHAIN</div>
+    <div class="auth-sub">Digital Asset Registry on Ethereum</div>
+    <div class="auth-tabs">
+      <div class="auth-tab active" id="tab-login" onclick="switchAuthTab('login')">Login</div>
+      <div class="auth-tab" id="tab-register" onclick="switchAuthTab('register')">Register</div>
+    </div>
+
+    <div id="auth-alert" class="alert"></div>
+
+    <!-- Login Form -->
+    <div id="login-form">
+      <div class="field" style="margin-bottom:16px">
+        <label>EMAIL</label>
+        <input type="email" id="login-email" placeholder="alice@example.com"/>
+      </div>
+      <div class="field" style="margin-bottom:24px">
+        <label>PASSWORD</label>
+        <input type="password" id="login-password" placeholder="••••••••"/>
+      </div>
+      <button class="btn btn-primary" style="width:100%" onclick="login()">
+        <span id="login-btn-text">Sign In</span>
+      </button>
+      <p style="font-size:12px;color:var(--muted);text-align:center;margin-top:16px">
+        Demo: register first, then login with your credentials
+      </p>
+    </div>
+
+    <!-- Register Form -->
+    <div id="register-form" style="display:none">
+      <div class="form-row">
+        <div class="field">
+          <label>USERNAME</label>
+          <input type="text" id="reg-username" placeholder="alice_eth"/>
+        </div>
+        <div class="field">
+          <label>EMAIL</label>
+          <input type="email" id="reg-email" placeholder="alice@example.com"/>
+        </div>
+      </div>
+      <div class="field" style="margin-bottom:16px">
+        <label>PASSWORD</label>
+        <input type="password" id="reg-password" placeholder="••••••••"/>
+      </div>
+      <div class="field" style="margin-bottom:24px">
+        <label>WALLET ADDRESS (optional)</label>
+        <input type="text" id="reg-wallet" placeholder="0x742d35Cc..."/>
+      </div>
+      <button class="btn btn-primary" style="width:100%" onclick="register()">
+        <span id="reg-btn-text">Create Account</span>
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- Main App -->
+<div id="main-app" style="display:none">
+  <div class="app">
+    <!-- Sidebar -->
+    <nav class="sidebar">
+      <div class="logo">⬡ Asset<span>Chain</span></div>
+      <div class="nav-item active" onclick="showPage('dashboard')">
+        <span class="nav-icon">◈</span> Dashboard
+      </div>
+      <div class="nav-item" onclick="showPage('register-asset')">
+        <span class="nav-icon">＋</span> Register Asset
+      </div>
+      <div class="nav-item" onclick="showPage('assets'); loadAssets()">
+        <span class="nav-icon">◫</span> My Assets
+        <span class="nav-badge" id="asset-count">0</span>
+      </div>
+      <div class="nav-item" onclick="showPage('api-docs')">
+        <span class="nav-icon">{ }</span> API Docs
+      </div>
+      <div class="sidebar-footer">
+        <div class="user-chip">
+          <strong id="sidebar-username">Loading...</strong>
+          <span id="sidebar-email">—</span>
+        </div>
+        <button class="btn btn-danger" style="width:100%;margin-top:10px;font-size:12px" onclick="logout()">Sign Out</button>
+      </div>
+    </nav>
+
+    <!-- Pages -->
+    <div class="main">
+
+      <!-- Dashboard -->
+      <div id="page-dashboard" class="page active">
+        <div class="page-title">Dashboard</div>
+        <div class="page-sub">Overview of your registered digital assets on Ethereum</div>
+        <div class="stats-grid">
+          <div class="stat-card">
+            <div class="stat-num" id="stat-total">0</div>
+            <div class="stat-label">Total Assets</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-num" id="stat-types">—</div>
+            <div class="stat-label">Asset Types</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-num" style="color:var(--success)" id="stat-chain">⬡ Live</div>
+            <div class="stat-label">Chain Status</div>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-title">Recent Assets</div>
+          <div id="recent-assets"><p style="color:var(--muted);font-size:13px">No assets registered yet. <a href="#" onclick="showPage('register-asset')" style="color:var(--accent)">Register your first asset →</a></p></div>
+        </div>
+        <div class="card" style="border-color:rgba(0,229,255,0.2)">
+          <div class="card-title">Smart Contract Info</div>
+          <div class="tx-info">
+            <div class="tx-row"><span class="tx-label">Contract</span><span class="tx-val">AssetRegistry.sol</span></div>
+            <div class="tx-row"><span class="tx-label">Network</span><span class="tx-val">Ethereum Sepolia Testnet (simulated)</span></div>
+            <div class="tx-row"><span class="tx-label">Address</span><span class="tx-val">0x742d35Cc6634C0532925a3b8D4C9B9e8f2e4c1D4</span></div>
+            <div class="tx-row"><span class="tx-label">Compiler</span><span class="tx-val">Solidity ^0.8.20</span></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Register Asset -->
+      <div id="page-register-asset" class="page">
+        <div class="page-title">Register Asset</div>
+        <div class="page-sub">Register a new digital asset on-chain and store metadata in the backend</div>
+        <div id="reg-alert" class="alert"></div>
+        <div class="card">
+          <div class="card-title">Asset Details</div>
+          <div class="form-row">
+            <div class="field">
+              <label>ASSET NAME *</label>
+              <input type="text" id="a-name" placeholder="e.g. Digital Artwork #001"/>
+            </div>
+            <div class="field">
+              <label>ASSET TYPE *</label>
+              <select id="a-type">
+                <option value="">Select type...</option>
+                <option value="NFT">NFT</option>
+                <option value="Token">Token</option>
+                <option value="Document">Document</option>
+                <option value="License">License</option>
+                <option value="Certificate">Certificate</option>
+                <option value="Other">Other</option>
+              </select>
+            </div>
+          </div>
+          <div class="form-row single">
+            <div class="field">
+              <label>DESCRIPTION</label>
+              <textarea id="a-desc" placeholder="Describe your digital asset..."></textarea>
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="field">
+              <label>METADATA URI (IPFS / URL)</label>
+              <input type="text" id="a-uri" placeholder="ipfs://Qm... or https://..."/>
+            </div>
+            <div class="field">
+              <label>TAGS (comma-separated)</label>
+              <input type="text" id="a-tags" placeholder="art, generative, rare"/>
+            </div>
+          </div>
+          <button class="btn btn-primary" onclick="registerAsset()">
+            <span id="reg-asset-btn">Register on Ethereum</span>
+          </button>
+        </div>
+        <div id="tx-result" style="display:none">
+          <div class="card" style="border-color:rgba(16,185,129,0.3)">
+            <div class="card-title" style="color:var(--success)">✓ Asset Registered — Transaction Confirmed</div>
+            <div class="tx-info" id="tx-details"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Assets List -->
+      <div id="page-assets" class="page">
+        <div class="page-title">My Assets</div>
+        <div class="page-sub">All your registered digital assets</div>
+        <div class="search-bar">
+          <input type="text" id="search-input" placeholder="Search assets..."/>
+          <select id="filter-type" style="width:140px">
+            <option value="">All Types</option>
+            <option value="NFT">NFT</option>
+            <option value="Token">Token</option>
+            <option value="Document">Document</option>
+            <option value="License">License</option>
+            <option value="Certificate">Certificate</option>
+            <option value="Other">Other</option>
+          </select>
+          <button class="btn btn-secondary" onclick="loadAssets()">Filter</button>
+        </div>
+        <div id="assets-list" class="assets-grid">
+          <p style="color:var(--muted);font-size:13px">Loading...</p>
+        </div>
+      </div>
+
+      <!-- API Docs -->
+      <div id="page-api-docs" class="page">
+        <div class="page-title">API Reference</div>
+        <div class="page-sub">REST API documentation with JWT authentication</div>
+
+        <div class="card" style="margin-bottom:24px">
+          <div class="card-title">Authentication</div>
+          <p style="font-size:13px;color:var(--muted);margin-bottom:12px">All protected endpoints require a JWT token in the <code style="background:var(--surface2);padding:2px 6px;border-radius:4px;color:var(--accent)">Authorization</code> header:</p>
+          <pre><span class="key">Authorization</span>: <span class="str">Bearer eyJhbGciOiJIUzI1NiIs...</span></pre>
+          <div id="current-token-box" style="margin-top:16px">
+            <p style="font-size:12px;color:var(--muted);margin-bottom:6px">Your current token:</p>
+            <div class="token-box" id="jwt-display">—
+              <button class="copy-btn" onclick="copyToken()">copy</button>
+            </div>
+          </div>
+        </div>
+
+        <div id="endpoints-list"></div>
+
+        <div class="card" style="border-color:rgba(124,58,237,0.3)">
+          <div class="card-title" style="color:#a78bfa">Solidity Contract</div>
+          <pre id="solidity-snippet">Loading...</pre>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<!-- Asset Detail Modal -->
+<div class="modal-bg" id="asset-modal" onclick="if(event.target===this)closeModal()">
+  <div class="modal">
+    <div class="modal-title">Asset Details <span class="modal-close" onclick="closeModal()">✕</span></div>
+    <div id="modal-content"></div>
+  </div>
+</div>
+
+<script>
+// ─── State ───────────────────────────────────────────────────────────────────
+let token = null;
+let currentUser = null;
+
+// ─── Simulated In-Memory Backend ─────────────────────────────────────────────
+// Since this is a static frontend demo (no real backend), we simulate
+// the API calls locally. In production, replace simulateApi() with fetch() calls.
+const mockDB = { users: [], assets: [] };
+
+async function simulateApi(method, path, body, authToken) {
+  await new Promise(r => setTimeout(r, 300 + Math.random() * 400)); // realistic delay
+
+  // Auth: Register
+  if (method === 'POST' && path === '/auth/register') {
+    if (mockDB.users.find(u => u.email === body.email))
+      return { ok: false, status: 409, data: { error: 'Email already registered' } };
+    const user = { id: crypto.randomUUID(), username: body.username, email: body.email, password: body.password, walletAddress: body.walletAddress || null, createdAt: new Date().toISOString() };
+    mockDB.users.push(user);
+    const { password, ...safe } = user;
+    return { ok: true, status: 201, data: { message: 'User registered', user: safe } };
+  }
+
+  // Auth: Login
+  if (method === 'POST' && path === '/auth/login') {
+    const user = mockDB.users.find(u => u.email === body.email && u.password === body.password);
+    if (!user) return { ok: false, status: 401, data: { error: 'Invalid credentials' } };
+    const tok = btoa(JSON.stringify({ userId: user.id, username: user.username, email: user.email, exp: Date.now() + 86400000 }));
+    return { ok: true, status: 200, data: { token: tok, message: 'Login successful' } };
+  }
+
+  // Decode token
+  let decoded;
+  try { decoded = JSON.parse(atob(authToken)); } catch { return { ok: false, status: 401, data: { error: 'Invalid token' } }; }
+
+  // Assets: Create
+  if (method === 'POST' && path === '/assets') {
+    if (!body.name || !body.assetType) return { ok: false, status: 400, data: { error: 'name and assetType required' } };
+    const assetId = crypto.randomUUID();
+    const metaHash = '0x' + [...(body.name + body.assetType)].map(c => c.charCodeAt(0).toString(16)).join('').padEnd(64,'0').slice(0,64);
+    const blockchain = {
+      success: true,
+      txHash: '0x' + crypto.randomUUID().replace(/-/g,'') + crypto.randomUUID().replace(/-/g,'').slice(0,32),
+      blockNumber: Math.floor(Math.random() * 1000000) + 18000000,
+      gasUsed: Math.floor(Math.random() * 50000) + 21000,
+      contractAddress: '0x742d35Cc6634C0532925a3b8D4C9B9e8f2e4c1D4',
+      network: 'ethereum-sepolia-testnet'
+    };
+    const asset = { id: assetId, name: body.name, description: body.description||'', assetType: body.assetType, metadataUri: body.metadataUri||null, tags: (body.tags||'').split(',').map(t=>t.trim()).filter(Boolean), owner: decoded.userId, ownerUsername: decoded.username, metadataHash: metaHash, blockchain, createdAt: new Date().toISOString() };
+    mockDB.assets.push(asset);
+    return { ok: true, status: 201, data: { message: 'Asset registered', asset, blockchain } };
+  }
+
+  // Assets: List
+  if (method === 'GET' && path.startsWith('/assets') && !path.includes('/', 8)) {
+    let assets = mockDB.assets.filter(a => a.owner === decoded.userId);
+    return { ok: true, status: 200, data: { total: assets.length, assets } };
+  }
+
+  // Assets: Get by ID
+  if (method === 'GET' && path.startsWith('/assets/')) {
+    const id = path.split('/')[2];
+    const asset = mockDB.assets.find(a => a.id === id);
+    if (!asset) return { ok: false, status: 404, data: { error: 'Asset not found' } };
+    return { ok: true, status: 200, data: { asset } };
+  }
+
+  return { ok: false, status: 404, data: { error: 'Not found' } };
+}
+
+// ─── Auth UI ──────────────────────────────────────────────────────────────────
+function switchAuthTab(tab) {
+  document.getElementById('login-form').style.display = tab === 'login' ? 'block' : 'none';
+  document.getElementById('register-form').style.display = tab === 'register' ? 'block' : 'none';
+  document.getElementById('tab-login').className = 'auth-tab' + (tab === 'login' ? ' active' : '');
+  document.getElementById('tab-register').className = 'auth-tab' + (tab === 'register' ? ' active' : '');
+  hideAlert('auth-alert');
+}
+
+function showAuthAlert(msg, type) {
+  const el = document.getElementById('auth-alert');
+  el.textContent = msg;
+  el.className = `alert alert-${type} show`;
+}
+function hideAlert(id) { document.getElementById(id).className = 'alert'; }
+function showAlert(id, msg, type) {
+  const el = document.getElementById(id);
+  el.textContent = msg;
+  el.className = `alert alert-${type} show`;
+  setTimeout(() => el.className = 'alert', 5000);
+}
+
+async function login() {
+  const email = document.getElementById('login-email').value;
+  const password = document.getElementById('login-password').value;
+  if (!email || !password) return showAuthAlert('Please fill all fields', 'error');
+  const btn = document.getElementById('login-btn-text');
+  btn.innerHTML = '<span class="spinner"></span>';
+  const res = await simulateApi('POST', '/auth/login', { email, password });
+  btn.textContent = 'Sign In';
+  if (!res.ok) return showAuthAlert(res.data.error, 'error');
+  token = res.data.token;
+  const decoded = JSON.parse(atob(token));
+  currentUser = decoded;
+  initApp();
+}
+
+async function register() {
+  const username = document.getElementById('reg-username').value;
+  const email = document.getElementById('reg-email').value;
+  const password = document.getElementById('reg-password').value;
+  const walletAddress = document.getElementById('reg-wallet').value;
+  if (!username || !email || !password) return showAuthAlert('Please fill all required fields', 'error');
+  const btn = document.getElementById('reg-btn-text');
+  btn.innerHTML = '<span class="spinner"></span>';
+  const res = await simulateApi('POST', '/auth/register', { username, email, password, walletAddress });
+  btn.textContent = 'Create Account';
+  if (!res.ok) return showAuthAlert(res.data.error, 'error');
+  showAuthAlert('Account created! Please login.', 'success');
+  switchAuthTab('login');
+  document.getElementById('login-email').value = email;
+}
+
+function logout() {
+  token = null; currentUser = null;
+  document.getElementById('auth-gate').style.display = 'flex';
+  document.getElementById('main-app').style.display = 'none';
+}
+
+// ─── App Init ─────────────────────────────────────────────────────────────────
+function initApp() {
+  document.getElementById('auth-gate').style.display = 'none';
+  document.getElementById('main-app').style.display = 'block';
+  document.getElementById('sidebar-username').textContent = currentUser.username;
+  document.getElementById('sidebar-email').textContent = currentUser.email;
+  loadDashboard();
+  renderApiDocs();
+}
+
+function showPage(name) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  document.getElementById('page-' + name).classList.add('active');
+  event.currentTarget.classList.add('active');
+  if (name === 'dashboard') loadDashboard();
+}
+
+// ─── Dashboard ────────────────────────────────────────────────────────────────
+async function loadDashboard() {
+  const res = await simulateApi('GET', '/assets', null, token);
+  const assets = res.data.assets || [];
+  document.getElementById('stat-total').textContent = assets.length;
+  const types = [...new Set(assets.map(a => a.assetType))];
+  document.getElementById('stat-types').textContent = types.length || '—';
+  document.getElementById('asset-count').textContent = assets.length;
+  const container = document.getElementById('recent-assets');
+  if (!assets.length) {
+    container.innerHTML = '<p style="color:var(--muted);font-size:13px">No assets registered yet. <a href="#" onclick="showPage(\'register-asset\')" style="color:var(--accent)">Register your first asset →</a></p>';
+    return;
+  }
+  container.innerHTML = assets.slice(-3).reverse().map(a => assetCardHTML(a)).join('');
+}
+
+function assetCardHTML(a) {
+  return `<div class="asset-card" onclick="showAssetModal('${a.id}')">
+    <div class="asset-header">
+      <div>
+        <div class="asset-name">${a.name}</div>
+        <span class="asset-type">${a.assetType}</span>
+      </div>
+    </div>
+    <div class="asset-desc">${a.description || '—'}</div>
+    <div class="asset-meta">
+      <span class="hash-tag">${a.metadataHash.slice(0,18)}...</span>
+      <span>${new Date(a.createdAt).toLocaleDateString()}</span>
+    </div>
+    ${a.tags.length ? `<div class="tag-list">${a.tags.map(t => `<span class="tag">${t}</span>`).join('')}</div>` : ''}
+  </div>`;
+}
+
+// ─── Register Asset ───────────────────────────────────────────────────────────
+async function registerAsset() {
+  const name = document.getElementById('a-name').value;
+  const assetType = document.getElementById('a-type').value;
+  const description = document.getElementById('a-desc').value;
+  const metadataUri = document.getElementById('a-uri').value;
+  const tags = document.getElementById('a-tags').value;
+  if (!name || !assetType) return showAlert('reg-alert', 'Asset name and type are required', 'error');
+  const btn = document.getElementById('reg-asset-btn');
+  btn.innerHTML = '<span class="spinner" style="border-top-color:#000"></span> Broadcasting to Ethereum...';
+  document.querySelector('#page-register-asset .btn').disabled = true;
+  const res = await simulateApi('POST', '/assets', { name, description, assetType, metadataUri, tags }, token);
+  btn.textContent = 'Register on Ethereum';
+  document.querySelector('#page-register-asset .btn').disabled = false;
+  if (!res.ok) return showAlert('reg-alert', res.data.error, 'error');
+  const { asset, blockchain } = res.data;
+  document.getElementById('tx-result').style.display = 'block';
+  document.getElementById('tx-details').innerHTML = `
+    <div class="tx-row"><span class="tx-label">Asset ID</span><span class="tx-val">${asset.id}</span></div>
+    <div class="tx-row"><span class="tx-label">Tx Hash</span><span class="tx-val">${blockchain.txHash}</span></div>
+    <div class="tx-row"><span class="tx-label">Block</span><span class="tx-val">#${blockchain.blockNumber}</span></div>
+    <div class="tx-row"><span class="tx-label">Gas Used</span><span class="tx-val">${blockchain.gasUsed.toLocaleString()}</span></div>
+    <div class="tx-row"><span class="tx-label">Network</span><span class="tx-val">${blockchain.network}</span></div>
+    <div class="tx-row"><span class="tx-label">Metadata Hash</span><span class="tx-val">${asset.metadataHash}</span></div>
+  `;
+  document.getElementById('a-name').value = '';
+  document.getElementById('a-desc').value = '';
+  document.getElementById('a-uri').value = '';
+  document.getElementById('a-tags').value = '';
+  document.getElementById('a-type').value = '';
+  document.getElementById('asset-count').textContent = mockDB.assets.filter(a => a.owner === currentUser.userId).length;
+}
+
+// ─── Assets List ──────────────────────────────────────────────────────────────
+async function loadAssets() {
+  const search = document.getElementById('search-input')?.value || '';
+  const typeFilter = document.getElementById('filter-type')?.value || '';
+  const res = await simulateApi('GET', '/assets', null, token);
+  let assets = res.data.assets || [];
+  if (search) assets = assets.filter(a => a.name.toLowerCase().includes(search.toLowerCase()) || a.description.toLowerCase().includes(search.toLowerCase()));
+  if (typeFilter) assets = assets.filter(a => a.assetType === typeFilter);
+  const container = document.getElementById('assets-list');
+  if (!assets.length) { container.innerHTML = '<p style="color:var(--muted);font-size:13px">No assets found.</p>'; return; }
+  container.innerHTML = assets.map(a => assetCardHTML(a)).join('');
+}
+
+// ─── Asset Modal ──────────────────────────────────────────────────────────────
+async function showAssetModal(id) {
+  const res = await simulateApi('GET', `/assets/${id}`, null, token);
+  if (!res.ok) return;
+  const a = res.data.asset;
+  document.getElementById('modal-content').innerHTML = `
+    <div class="detail-row"><div class="detail-label">Name</div><div class="detail-val">${a.name}</div></div>
+    <div class="detail-row"><div class="detail-label">Type</div><div class="detail-val"><span class="asset-type">${a.assetType}</span></div></div>
+    <div class="detail-row"><div class="detail-label">Description</div><div class="detail-val" style="color:var(--muted)">${a.description||'—'}</div></div>
+    <div class="detail-row"><div class="detail-label">Metadata URI</div><div class="detail-val" style="font-family:var(--mono);font-size:12px">${a.metadataUri||'—'}</div></div>
+    <div class="detail-row"><div class="detail-label">Tags</div><div class="tag-list">${a.tags.map(t=>`<span class="tag">${t}</span>`).join('')||'—'}</div></div>
+    <div class="detail-row"><div class="detail-label">Registered</div><div class="detail-val">${new Date(a.createdAt).toLocaleString()}</div></div>
+    <div style="margin-top:16px"><div class="card-title">On-Chain Record</div>
+    <div class="tx-info">
+      <div class="tx-row"><span class="tx-label">Tx Hash</span><span class="tx-val">${a.blockchain.txHash}</span></div>
+      <div class="tx-row"><span class="tx-label">Block</span><span class="tx-val">#${a.blockchain.blockNumber}</span></div>
+      <div class="tx-row"><span class="tx-label">Gas Used</span><span class="tx-val">${a.blockchain.gasUsed.toLocaleString()}</span></div>
+      <div class="tx-row"><span class="tx-label">Metadata Hash</span><span class="tx-val">${a.metadataHash}</span></div>
+    </div></div>
+  `;
+  document.getElementById('asset-modal').classList.add('open');
+}
+function closeModal() { document.getElementById('asset-modal').classList.remove('open'); }
+
+// ─── API Docs ─────────────────────────────────────────────────────────────────
+function copyToken() {
+  navigator.clipboard.writeText(token || '');
+  const btn = document.querySelector('.copy-btn');
+  btn.textContent = 'copied!'; setTimeout(() => btn.textContent = 'copy', 1500);
+}
+
+function renderApiDocs() {
+  const endpoints = [
+    { method: 'POST', path: '/auth/register', desc: 'Register new user', body: `{\n  <span class="key">"username"</span>: <span class="str">"alice"</span>,\n  <span class="key">"email"</span>: <span class="str">"alice@example.com"</span>,\n  <span class="key">"password"</span>: <span class="str">"SecurePass123"</span>,\n  <span class="key">"walletAddress"</span>: <span class="str">"0x..."</span>  <span class="kw">// optional</span>\n}` },
+    { method: 'POST', path: '/auth/login', desc: 'Authenticate, get JWT', body: `{\n  <span class="key">"email"</span>: <span class="str">"alice@example.com"</span>,\n  <span class="key">"password"</span>: <span class="str">"SecurePass123"</span>\n}` },
+    { method: 'POST', path: '/assets', desc: 'Register asset (🔒 JWT)', body: `{\n  <span class="key">"name"</span>: <span class="str">"Digital Artwork #001"</span>,\n  <span class="key">"assetType"</span>: <span class="str">"NFT"</span>,\n  <span class="key">"description"</span>: <span class="str">"A generative piece"</span>,\n  <span class="key">"metadataUri"</span>: <span class="str">"ipfs://Qm..."</span>,\n  <span class="key">"tags"</span>: [<span class="str">"art"</span>, <span class="str">"rare"</span>]\n}` },
+    { method: 'GET', path: '/assets', desc: 'List assets (🔒 JWT)', body: `<span class="kw">// Query params: ?owner=me &type=NFT &search=art</span>\n<span class="kw">// Returns: { total, assets[] }</span>` },
+    { method: 'GET', path: '/assets/:id', desc: 'Get single asset (🔒 JWT)', body: `<span class="kw">// Returns full asset including blockchain tx data</span>` },
+    { method: 'GET', path: '/contract/abi', desc: 'Get Solidity ABI', body: `<span class="kw">// Returns ABI + full Solidity source</span>` },
+  ];
+  document.getElementById('endpoints-list').innerHTML = endpoints.map((e, i) => `
+    <div class="endpoint">
+      <div class="endpoint-header" onclick="toggleEndpoint(${i})">
+        <span class="method ${e.method.toLowerCase()}">${e.method}</span>
+        <span class="endpoint-path">${e.path}</span>
+        <span class="endpoint-desc">${e.desc}</span>
+      </div>
+      <div class="endpoint-body" id="ep-${i}">
+        <pre>${e.body}</pre>
+      </div>
+    </div>`).join('');
+
+  document.getElementById('solidity-snippet').innerHTML =
+    `<span class="kw">// SPDX-License-Identifier: MIT</span>
+<span class="kw">pragma solidity</span> ^<span class="num">0.8.20</span>;
+
+<span class="kw">contract</span> <span class="key">AssetRegistry</span> {
+    <span class="kw">struct</span> <span class="key">Asset</span> {
+        <span class="kw">bytes32</span> metadataHash;
+        <span class="kw">address</span> owner;
+        <span class="kw">uint256</span> timestamp;
+    }
+
+    mapping(<span class="kw">bytes32</span> => <span class="key">Asset</span>) <span class="kw">private</span> assets;
+
+    <span class="kw">event</span> <span class="key">AssetRegistered</span>(
+        <span class="kw">bytes32 indexed</span> assetId,
+        <span class="kw">address indexed</span> owner,
+        <span class="kw">uint256</span> timestamp
+    );
+
+    <span class="kw">function</span> <span class="key">registerAsset</span>(
+        <span class="kw">bytes32</span> assetId,
+        <span class="kw">bytes32</span> metadataHash,
+        <span class="kw">address</span> owner
+    ) <span class="kw">external returns</span> (<span class="kw">bool</span>) {
+        require(assets[assetId].timestamp == <span class="num">0</span>, <span class="str">"Asset already registered"</span>);
+        assets[assetId] = <span class="key">Asset</span>(metadataHash, owner, block.timestamp);
+        emit <span class="key">AssetRegistered</span>(assetId, owner, block.timestamp);
+        <span class="kw">return true</span>;
+    }
+
+    <span class="kw">function</span> <span class="key">getAsset</span>(<span class="kw">bytes32</span> assetId)
+        <span class="kw">external view</span>
+        <span class="kw">returns</span> (<span class="kw">bytes32</span>, <span class="kw">address</span>, <span class="kw">uint256</span>)
+    {
+        <span class="key">Asset</span> memory a = assets[assetId];
+        require(a.timestamp != <span class="num">0</span>, <span class="str">"Asset not found"</span>);
+        <span class="kw">return</span> (a.metadataHash, a.owner, a.timestamp);
+    }
+}`;
+
+  if (token) document.getElementById('jwt-display').innerHTML = token + '<button class="copy-btn" onclick="copyToken()">copy</button>';
+}
+
+function toggleEndpoint(i) {
+  const el = document.getElementById('ep-' + i);
+  el.classList.toggle('open');
+}
+</script>
+</body>
+</html>
