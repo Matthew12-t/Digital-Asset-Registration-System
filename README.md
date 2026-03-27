@@ -8,7 +8,6 @@ A simple but complete asset registration system that lets users register and que
 - **Auth**: JWT (jsonwebtoken) + bcryptjs
 - **Storage**: In-memory (simulated DB)
 - **Blockchain**: Solidity ABI snippet + simulated contract calls
-- **Deploy**: Vercel (serverless)
 
 ---
 
@@ -22,6 +21,61 @@ Client → GET  /assets        → List/search assets (JWT required)
 Client → GET  /assets/:id    → Fetch single asset (JWT required)
 Client → GET  /contract/abi  → View Solidity ABI + contract source
 ```
+
+---
+
+##  How to Run & Test
+
+### 1. Local Setup
+
+1. Ensure **Node.js 18+** is installed.
+2. Clone this repository and open it in your terminal.
+3. Create a `.env` file in project root and set:
+
+```env
+JWT_SECRET=replace-with-a-strong-random-secret
+PORT=3000
+```
+
+4. Install dependencies:
+
+```bash
+npm install
+```
+
+### 2. Run the API Locally
+
+Start server in development mode:
+
+```bash
+npm run dev
+```
+
+Or run in normal mode:
+
+```bash
+npm start
+```
+
+By default, the API runs on:
+
+```text
+http://localhost:3000
+```
+
+### 3. Quick API Test
+
+Use Postman/Insomnia (or any REST client) with this flow:
+
+1. **POST** `/auth/register` to create a user.
+2. **POST** `/auth/login` to get a JWT token.
+3. Use header `Authorization: Bearer <token>`.
+4. **POST** `/assets` to register an asset.
+5. **GET** `/assets` and **GET** `/assets/:id` to verify data.
+
+### 4. Test via Frontend (Optional)
+
+Open `index.html` in your browser for a UI demo (simulated in-memory frontend flow).
 
 ---
 
